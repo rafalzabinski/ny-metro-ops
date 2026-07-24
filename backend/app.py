@@ -1,33 +1,19 @@
 from pathlib import Path
+import os
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 
-from .atis import get_lga_status
-from .templates import INDEX_HTML
+from .atis import get_nyc_airports_status
+from .templates import render_index
 
-app = FastAPI(title="NY Metro Ops")
-BASE_DIR = Path(__file__).resolve().parent.parent
-app.mount("/assets", StaticFiles(directory=str(BASE_DIR / "assets")), name="assets")
+app = FastAPI(title='NY Metro Ops')
+MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN', '')
 
-
-@app.get("/", response_class=HTMLResponse)
+@app.get('/', response_class=HTMLResponse)
 def home():
-    return HTMLResponse(INDEX_HTML)
+    return HTMLResponse(render_index(mapbox_token=MAPBOX_TOKEN))
 
-
-@app.get("/api/lga")
-def lga():
-    try:
-        return JSONResponse(get_lga_status())
-    except Exception as exc:
-        return JSONResponse(
-            {
-                "airport": "KLGA",
-                "status": f"Failed to load ATIS: {exc}",
-                "updated_at": None,
-                "raw_atis": None,
-            },
-            status_code=502,
-        )
+@app.get('/api/nyc')
+def nyc():
+    return JSONResponse({'airports': get_nyc_airports_status(), 'status': 'Live ATIS loaded'})

@@ -1,9 +1,11 @@
-INDEX_HTML = """<!doctype html>
+INDEX_TEMPLATE = """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NY Metro Ops - LGA Editor</title>
+  <title>NY Metro Ops</title>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.5.2/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.2/mapbox-gl.js"></script>
   <style>
     :root {
       --bg: #07090c;
@@ -17,9 +19,7 @@ INDEX_HTML = """<!doctype html>
       --soft: rgba(255,255,255,.06);
       --shadow: 0 18px 45px rgba(0,0,0,.45);
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       background:
@@ -28,13 +28,11 @@ INDEX_HTML = """<!doctype html>
       color: var(--text);
       font-family: Inter, Arial, Helvetica, sans-serif;
     }
-
     .page {
-      max-width: 1520px;
+      max-width: 1600px;
       margin: 0 auto;
       padding: 18px;
     }
-
     .topbar {
       display: flex;
       justify-content: space-between;
@@ -42,14 +40,12 @@ INDEX_HTML = """<!doctype html>
       gap: 20px;
       margin-bottom: 14px;
     }
-
     .brand {
       display: flex;
       align-items: baseline;
       gap: 16px;
       flex-wrap: wrap;
     }
-
     h1 {
       margin: 0;
       font-size: clamp(28px, 3vw, 44px);
@@ -58,7 +54,6 @@ INDEX_HTML = """<!doctype html>
       font-weight: 900;
       color: #f7f9fb;
     }
-
     .tagline {
       color: var(--muted);
       text-transform: uppercase;
@@ -66,7 +61,6 @@ INDEX_HTML = """<!doctype html>
       font-weight: 800;
       letter-spacing: .22em;
     }
-
     .updated-box {
       border: 1px solid var(--border);
       background: linear-gradient(180deg, #141923, #0d1117);
@@ -77,52 +71,55 @@ INDEX_HTML = """<!doctype html>
       min-width: 250px;
       color: #d9deea;
     }
-
     .updated-box strong {
       display: block;
       font-size: 15px;
       margin-top: 3px;
       color: #fff;
     }
-
     .layout {
       display: grid;
-      grid-template-columns: 330px minmax(0, 1fr);
+      grid-template-columns: 1fr;
       gap: 14px;
       align-items: start;
     }
 
+    .top-cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(250px, 1.15fr);
+      gap: 12px;
+    }
     .card,
-    .diagram-panel {
+    .map-panel {
       background: linear-gradient(180deg, #12161d, #0d1015);
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
       border-radius: 18px;
       overflow: hidden;
     }
-
     .card {
-      padding: 14px;
-      margin-bottom: 12px;
+      padding: 13px 14px;
+      margin: 0;
     }
 
+    .compact-card {
+      min-height: 168px;
+    }
     .airport-head {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 12px;
       border-bottom: 1px solid rgba(255,255,255,.09);
-      padding-bottom: 10px;
-      margin-bottom: 8px;
+      padding-bottom: 8px;
+      margin-bottom: 4px;
     }
-
     .airport-code {
-      font-size: 42px;
+      font-size: 32px;
       font-weight: 900;
       line-height: 1;
       color: #fff;
     }
-
     .airport-name {
       margin-top: 4px;
       color: var(--muted);
@@ -131,7 +128,6 @@ INDEX_HTML = """<!doctype html>
       letter-spacing: .1em;
       font-weight: 800;
     }
-
     .live-badge {
       border: 1px solid rgba(46,204,113,.55);
       background: rgba(46,204,113,.15);
@@ -143,7 +139,6 @@ INDEX_HTML = """<!doctype html>
       border-radius: 999px;
       box-shadow: 0 0 0 1px rgba(46,204,113,.08) inset;
     }
-
     .field {
       display: grid;
       grid-template-columns: 120px 1fr;
@@ -152,7 +147,6 @@ INDEX_HTML = """<!doctype html>
       padding: 8px 0;
       font-size: 14px;
     }
-
     .label {
       color: var(--muted);
       text-transform: uppercase;
@@ -160,46 +154,206 @@ INDEX_HTML = """<!doctype html>
       font-weight: 800;
       letter-spacing: .07em;
     }
-
     .value {
       font-weight: 800;
       color: #f2f6ff;
       word-break: break-word;
     }
 
-    details {
-      margin-top: 10px;
-      border-top: 1px solid rgba(255,255,255,.08);
-      padding-top: 10px;
+    .airport-strip {
+      padding-bottom: 10px;
     }
 
-    summary {
-      cursor: pointer;
-      list-style: none;
-      text-transform: uppercase;
-      font-size: 11px;
-      letter-spacing: .1em;
+    .compact-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 12px;
+      padding-top: 4px;
+    }
+
+    .compact-metric {
+      min-width: 0;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      padding: 6px 0 7px;
+    }
+
+    .compact-metric.wide {
+      grid-column: 1 / -1;
+    }
+
+    .strip-label {
       color: var(--muted);
+      text-transform: uppercase;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      margin-bottom: 4px;
+    }
+
+    .strip-value {
+      font-weight: 800;
+      color: #f4f7ff;
+      font-size: 14px;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .strip-value.runway {
+      font-size: 26px;
+      line-height: 1;
+      letter-spacing: .03em;
+    }
+
+    .strip-footer {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 8px;
+    }
+
+    .mini-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 10px;
       font-weight: 900;
+      letter-spacing: .08em;
+      color: #d9deea;
+      border: 1px solid rgba(255,255,255,.09);
+      background: rgba(255,255,255,.04);
     }
 
-    summary::-webkit-details-marker { display: none; }
+    .weather-card {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
 
-    .raw-atis {
-      margin-top: 10px;
-      border: 1px solid rgba(255,255,255,.08);
-      padding: 10px;
-      font-family: "Courier New", monospace;
+    .weather-main {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 14px;
+      align-items: center;
+      padding: 8px 0;
+    }
+
+    .wind-compass {
+      position: relative;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.12);
+      background:
+        radial-gradient(circle, rgba(102,163,255,.12), transparent 56%),
+        rgba(255,255,255,.025);
+      display: grid;
+      place-items: center;
+    }
+
+    .wind-compass::before,
+    .wind-compass::after {
+      content: "";
+      position: absolute;
+      background: rgba(255,255,255,.08);
+    }
+
+    .wind-compass::before {
+      width: 1px;
+      height: 70%;
+    }
+
+    .wind-compass::after {
+      width: 70%;
+      height: 1px;
+    }
+
+    .wind-arrow {
+      position: relative;
+      width: 54px;
+      height: 54px;
+      transform: rotate(0deg);
+      transition: transform .5s ease;
+      z-index: 2;
+    }
+
+    .wind-arrow::before {
+      content: "";
+      position: absolute;
+      left: 25px;
+      top: 9px;
+      width: 4px;
+      height: 36px;
+      border-radius: 999px;
+      background: #66a3ff;
+      box-shadow: 0 0 12px rgba(102,163,255,.35);
+    }
+
+    .wind-arrow::after {
+      content: "";
+      position: absolute;
+      left: 17px;
+      top: 5px;
+      width: 16px;
+      height: 16px;
+      border-left: 4px solid #66a3ff;
+      border-top: 4px solid #66a3ff;
+      transform: rotate(45deg);
+    }
+
+    .weather-reading {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .weather-degrees {
+      font-size: 34px;
+      line-height: 1;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .weather-speed {
+      font-size: 15px;
+      font-weight: 900;
+      color: #dce5f6;
+    }
+
+    .weather-sub {
+      color: var(--muted);
       font-size: 11px;
-      line-height: 1.45;
-      white-space: pre-wrap;
-      background: #0a0c11;
-      color: #d6dce8;
-      max-height: 260px;
-      overflow: auto;
+      line-height: 1.35;
+      margin-top: 6px;
     }
 
-    .diagram-head {
+    .airport-winds {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .airport-wind {
+      border-top: 1px solid rgba(255,255,255,.07);
+      padding-top: 7px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .airport-wind strong {
+      display: block;
+      margin-top: 2px;
+      color: #fff;
+      font-size: 12px;
+    }
+
+    .note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .map-head {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
@@ -207,15 +361,13 @@ INDEX_HTML = """<!doctype html>
       padding: 14px 16px 12px;
       border-bottom: 1px solid rgba(255,255,255,.09);
     }
-
-    .diagram-title {
+    .map-title {
       font-size: 22px;
       font-weight: 900;
       letter-spacing: .02em;
       color: #fff;
     }
-
-    .diagram-sub {
+    .map-sub {
       margin-top: 4px;
       color: var(--muted);
       font-size: 12px;
@@ -223,132 +375,15 @@ INDEX_HTML = """<!doctype html>
       letter-spacing: .08em;
       font-weight: 800;
     }
-
-    .airport-location {
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      font-weight: 800;
-      text-align: right;
-    }
-
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 12px 14px 0;
-      align-items: center;
-    }
-
-    .toolbar .group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
-      padding: 8px;
-      border: 1px solid rgba(255,255,255,.09);
-      border-radius: 12px;
-      background: rgba(255,255,255,.03);
-    }
-
-    .tool-label {
-      font-size: 11px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      font-weight: 800;
-      margin-right: 2px;
-    }
-
-    .tool-btn {
-      appearance: none;
-      border: 1px solid rgba(255,255,255,.12);
-      background: #11151c;
-      color: #dce3f3;
-      border-radius: 999px;
-      padding: 7px 10px;
-      font-size: 12px;
-      font-weight: 800;
-      cursor: pointer;
-      transition: transform .08s ease, background .15s ease, border-color .15s ease;
-    }
-
-    .tool-btn:hover { transform: translateY(-1px); }
-    .tool-btn.active {
-      background: var(--accent);
-      border-color: rgba(102,163,255,.8);
-      color: #fff;
-    }
-
-    .tool-btn.arrival.active { background: var(--arrival); border-color: rgba(255,77,77,.8); }
-    .tool-btn.departure.active { background: var(--departure); border-color: rgba(46,204,113,.8); }
-
-    .tool-btn.secondary {
-      color: #fff;
-      background: #0f1319;
-    }
-
-    .tool-readout {
-      margin-left: auto;
-      font-size: 12px;
-      color: #c8d0df;
-      font-weight: 700;
-      letter-spacing: .02em;
-    }
-
-    .diagram-wrap {
-      padding: 14px;
-    }
-
-    .stage {
+    .map-area {
       position: relative;
-      width: min(100%, 1040px);
-      margin: 0 auto;
-      background: #050608;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
-      user-select: none;
+      height: 68vh;
+      min-height: 580px;
     }
-
-    .stage img {
-      display: block;
-      width: 100%;
-      height: auto;
-      background: #050608;
-      filter: saturate(.95) contrast(1.02);
-      mix-blend-mode: normal;
-      opacity: .98;
-      user-select: none;
-      pointer-events: none;
-    }
-
-    .overlay-svg {
+    #map {
       position: absolute;
       inset: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
     }
-
-    .overlay-hint {
-      position: absolute;
-      left: 14px;
-      bottom: 14px;
-      z-index: 8;
-      padding: 8px 10px;
-      border: 1px solid rgba(255,255,255,.14);
-      border-radius: 10px;
-      background: rgba(0,0,0,.45);
-      color: #e6ebf5;
-      font-size: 12px;
-      letter-spacing: .02em;
-      backdrop-filter: blur(4px);
-      max-width: calc(100% - 28px);
-    }
-
     .legend {
       display: flex;
       gap: 18px;
@@ -362,7 +397,6 @@ INDEX_HTML = """<!doctype html>
       color: #d6dcea;
       flex-wrap: wrap;
     }
-
     .legend-dot {
       display: inline-block;
       width: 12px;
@@ -372,10 +406,9 @@ INDEX_HTML = """<!doctype html>
       vertical-align: -1px;
       box-shadow: 0 0 0 2px rgba(255,255,255,.08);
     }
-
     .legend-dot.arrival { background: var(--arrival); }
     .legend-dot.departure { background: var(--departure); }
-
+    .legend-dot.airport { background: var(--accent); }
     .statusbar {
       border-top: 1px solid rgba(255,255,255,.08);
       padding: 10px 14px;
@@ -385,40 +418,54 @@ INDEX_HTML = """<!doctype html>
       letter-spacing: .08em;
       font-weight: 800;
       display: flex;
-      gap: 14px;
       justify-content: space-between;
+      gap: 12px;
       flex-wrap: wrap;
     }
-
-    .statusbar .left, .statusbar .right {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
+    .dim { color: #c2cbdb; font-weight: 800; }
+    .airport-marker {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #66a3ff;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 2px 8px rgba(0,0,0,.35);
+    }
+    .marker-popup h3 {
+      margin: 0 0 6px;
+      font-size: 14px;
+    }
+    .marker-popup .row {
+      margin: 2px 0;
+      font-size: 12px;
+      color: #ddd;
+      white-space: nowrap;
+    }
+    @media (max-width: 1200px) {
+      .top-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
 
-    .dim {
-      color: #c2cbdb;
-      font-weight: 800;
-    }
-
-    @media (max-width: 1000px) {
-      .layout { grid-template-columns: 1fr; }
+    @media (max-width: 760px) {
+      .top-cards {
+        grid-template-columns: 1fr;
+      }
       .topbar {
         align-items: flex-start;
         flex-direction: column;
       }
       .updated-box { text-align: left; }
-      .tool-readout { margin-left: 0; width: 100%; }
+      .map-area { height: 62vh; min-height: 500px; }
     }
   </style>
 </head>
-
 <body>
   <div class="page">
     <header class="topbar">
       <div class="brand">
         <h1>NY METRO OPS</h1>
-        <div class="tagline">Runway alignment editor</div>
+        <div class="tagline">NYC airports live runways</div>
       </div>
       <div class="updated-box">
         UPDATED
@@ -427,330 +474,670 @@ INDEX_HTML = """<!doctype html>
     </header>
 
     <main class="layout">
-      <aside>
-        <section class="card">
+      <section class="top-cards">
+        <section class="card airport-strip compact-card">
           <div class="airport-head">
             <div>
               <div class="airport-code">LGA</div>
-              <div class="airport-name">La Guardia</div>
+              <div class="airport-name">La Guardia · ACTIVE</div>
+            </div>
+            <div class="live-badge">LIVE</div>
+          </div>
+          <div class="compact-metrics">
+            <div class="compact-metric">
+              <div class="strip-label">Landing</div>
+              <div class="strip-value runway" id="lgaLanding">—</div>
+            </div>
+            <div class="compact-metric">
+              <div class="strip-label">Departure</div>
+              <div class="strip-value runway" id="lgaDeparture">—</div>
+            </div>
+            <div class="compact-metric wide">
+              <div class="strip-label">Wind</div>
+              <div class="strip-value" id="lgaWind">—</div>
+            </div>
+            <div class="compact-metric wide">
+              <div class="strip-label">Approach</div>
+              <div class="strip-value" id="lgaApproach">—</div>
+            </div>
+          </div>
+          <div class="strip-footer"><span class="mini-badge" id="lgaAtis">ATIS —</span></div>
+        </section>
+
+        <section class="card airport-strip compact-card">
+          <div class="airport-head">
+            <div>
+              <div class="airport-code">JFK</div>
+              <div class="airport-name">John F. Kennedy · ACTIVE</div>
+            </div>
+            <div class="live-badge">LIVE</div>
+          </div>
+          <div class="compact-metrics">
+            <div class="compact-metric">
+              <div class="strip-label">Landing</div>
+              <div class="strip-value runway" id="jfkLanding">—</div>
+            </div>
+            <div class="compact-metric">
+              <div class="strip-label">Departure</div>
+              <div class="strip-value runway" id="jfkDeparture">—</div>
+            </div>
+            <div class="compact-metric wide">
+              <div class="strip-label">Wind</div>
+              <div class="strip-value" id="jfkWind">—</div>
+            </div>
+            <div class="compact-metric wide">
+              <div class="strip-label">Approach</div>
+              <div class="strip-value" id="jfkApproach">—</div>
+            </div>
+          </div>
+          <div class="strip-footer"><span class="mini-badge" id="jfkAtis">ATIS —</span></div>
+        </section>
+
+        <section class="card airport-strip compact-card">
+          <div class="airport-head">
+            <div>
+              <div class="airport-code">EWR</div>
+              <div class="airport-name">Newark Liberty · ACTIVE</div>
+            </div>
+            <div class="live-badge">LIVE</div>
+          </div>
+          <div class="compact-metrics">
+            <div class="compact-metric">
+              <div class="strip-label">Landing</div>
+              <div class="strip-value runway" id="ewrLanding">—</div>
+            </div>
+            <div class="compact-metric">
+              <div class="strip-label">Departure</div>
+              <div class="strip-value runway" id="ewrDeparture">—</div>
+            </div>
+            <div class="compact-metric wide">
+              <div class="strip-label">Wind</div>
+              <div class="strip-value" id="ewrWind">—</div>
+            </div>
+            <div class="compact-metric wide">
+              <div class="strip-label">Approach</div>
+              <div class="strip-value" id="ewrApproach">—</div>
+            </div>
+          </div>
+          <div class="strip-footer"><span class="mini-badge" id="ewrAtis">ATIS —</span></div>
+        </section>
+
+        <section class="card weather-card compact-card">
+          <div class="airport-head">
+            <div>
+              <div class="airport-code" style="font-size:24px;">METRO WIND</div>
+              <div class="airport-name">Mean of current airport winds</div>
             </div>
             <div class="live-badge">LIVE</div>
           </div>
 
-          <div class="field"><div class="label">Approach</div><div class="value" id="approach">—</div></div>
-          <div class="field"><div class="label">Landing</div><div class="value" id="landingRunway">—</div></div>
-          <div class="field"><div class="label">Departure</div><div class="value" id="departureRunway">—</div></div>
-          <div class="field"><div class="label">Wind</div><div class="value" id="wind">—</div></div>
-          <div class="field"><div class="label">ATIS</div><div class="value" id="atisTime">—</div></div>
+          <div class="weather-main">
+            <div class="wind-compass">
+              <div class="wind-arrow" id="metroWindArrow"></div>
+            </div>
+            <div>
+              <div class="weather-reading">
+                <span class="weather-degrees" id="metroWindDirection">—</span>
+                <span class="weather-speed" id="metroWindSpeed">—</span>
+              </div>
+              <div class="weather-sub">Arrow points from the reported wind direction toward the airport.</div>
+            </div>
+          </div>
 
-          <details>
-            <summary>View ATIS text</summary>
-            <div class="raw-atis" id="rawAtis">—</div>
-          </details>
+          <div class="airport-winds">
+            <div class="airport-wind">LGA<strong id="metroLgaWind">—</strong></div>
+            <div class="airport-wind">JFK<strong id="metroJfkWind">—</strong></div>
+            <div class="airport-wind">EWR<strong id="metroEwrWind">—</strong></div>
+          </div>
         </section>
+      </section>
 
-        <section class="card">
-          <div class="field"><div class="label">Source</div><div class="value">atis.info</div></div>
-          <div class="field"><div class="label">Autosave</div><div class="value">localStorage</div></div>
-          <div class="field"><div class="label">Status</div><div class="value" id="statusSide">—</div></div>
-        </section>
-      </aside>
-
-      <section class="diagram-panel">
-        <div class="diagram-head">
+      <section class="map-panel">
+        <div class="map-head">
           <div>
-            <div class="diagram-title">LA GUARDIA (LGA)</div>
-            <div class="diagram-sub" id="panelSub">Click a runway end, then click the map to place it</div>
+            <div class="map-title">NYC AIRPORT VIEW</div>
+            <div class="map-sub">Current open runways for LGA, JFK, and EWR</div>
           </div>
-          <div class="airport-location">New York, New York</div>
+          <div class="map-sub">Dark style · Mapbox</div>
         </div>
 
-        <div class="toolbar">
-          <div class="group">
-            <div class="tool-label">Edit runway end</div>
-            <button class="tool-btn active" data-runway="04">04</button>
-            <button class="tool-btn" data-runway="22">22</button>
-            <button class="tool-btn" data-runway="13">13</button>
-            <button class="tool-btn" data-runway="31">31</button>
-          </div>
-
-          <div class="group">
-            <div class="tool-label">Actions</div>
-            <button class="tool-btn secondary" id="resetBtn">Reset defaults</button>
-            <button class="tool-btn secondary" id="copyBtn">Copy JSON</button>
-            <button class="tool-btn secondary" id="downloadBtn">Download JSON</button>
-          </div>
-
-          <div class="tool-readout" id="readout">Selected runway: 04 — click map to place anchor</div>
-        </div>
-
-        <div class="diagram-wrap">
-          <div class="stage" id="mapStage">
-            <img src="/assets/lga_dark_map.png" alt="Dark map reference for LGA">
-            <svg class="overlay-svg" id="overlaySvg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
-            <div class="overlay-hint" id="hint">Select a runway end above, then click anywhere on the map to place its anchor. The point becomes the runway-end reference for both arrival and departure arrows.</div>
-          </div>
+        <div class="map-area">
+          <div id="map"></div>
         </div>
 
         <div class="legend">
-          <div><span class="legend-dot arrival"></span>Arrival / landing arrow</div>
-          <div><span class="legend-dot departure"></span>Departure arrow</div>
-          <div><span class="legend-dot" style="background:#66a3ff"></span>Selected runway anchor</div>
+          <div><span class="legend-dot airport"></span>Airport</div>
+          <div><span class="legend-dot arrival"></span>Arrival / landing runway</div>
+          <div><span class="legend-dot departure"></span>Departure runway</div>
         </div>
 
         <div class="statusbar">
-          <div class="left">
-            <span>Status: <span class="dim" id="status">Waiting for live data...</span></span>
-          </div>
-          <div class="right">
-            <span>Click coords: <span class="dim" id="coordReadout">—</span></span>
-          </div>
+          <div>Source: <span class="dim" id="status">Waiting for live data...</span></div>
+          <div>Mapbox: <span class="dim" id="mapboxStatus">loading</span></div>
         </div>
       </section>
     </main>
   </div>
 
   <script>
+    const MAPBOX_TOKEN = "__MAPBOX_TOKEN__";
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    const AIRPORTS = {
+      LGA: { code: "LGA", name: "La Guardia", lat: 40.7769, lon: -73.8740, color: "#66a3ff" },
+      JFK: { code: "JFK", name: "John F. Kennedy", lat: 40.6413, lon: -73.7781, color: "#66a3ff" },
+      EWR: { code: "EWR", name: "Newark Liberty", lat: 40.6895, lon: -74.1745, color: "#66a3ff" }
+    };
+
     function safe(value, fallback = "—") {
       return value === undefined || value === null || value === "" ? fallback : value;
     }
 
-    const STORAGE_KEY = "lgaRunwayAnchors_v1";
+    function airportCardIds(code) {
+      return {
+        approach: `${code.toLowerCase()}Approach`,
+        landing: `${code.toLowerCase()}Landing`,
+        departure: `${code.toLowerCase()}Departure`,
+        wind: `${code.toLowerCase()}Wind`,
+        atis: `${code.toLowerCase()}Atis`
+      };
+    }
 
-    const defaultAnchors = {
-      "04": { x: 31.0, y: 69.5 },
-      "22": { x: 52.0, y: 26.8 },
-      "13": { x: 40.1, y: 34.0 },
-      "31": { x: 73.0, y: 60.9 }
-    };
+    function airportPopupHTML(a, status) {
+      return `
+        <div class="marker-popup">
+          <h3>${a.code} · ${a.name}</h3>
+          <div class="row">Landing: <b>${safe(status.landing_runway)}</b></div>
+          <div class="row">Departure: <b>${safe(status.departure_runway)}</b></div>
+          <div class="row">Wind: <b>${safe(status.wind)}</b></div>
+          <div class="row">Approach: <b>${safe(status.approach_type || status.approach_label)}</b></div>
+        </div>
+      `;
+    }
 
-    let selectedRunway = "04";
-    let anchors = loadAnchors();
+    function setCard(code, status) {
+      const ids = airportCardIds(code);
+      document.getElementById(ids.approach).textContent = safe(status.approach_type || status.approach_label);
+      document.getElementById(ids.landing).textContent = safe(status.landing_runway);
+      document.getElementById(ids.departure).textContent = safe(status.departure_runway);
+      document.getElementById(ids.wind).textContent = safe(status.wind);
+      document.getElementById(ids.atis).textContent = `ATIS ${safe(status.atis_time)}`;
+    }
 
-    const activeLayout = {
-      arrival: {
-        "22": { dx: 10, dy: -10 },
-        "04": { dx: -10, dy: 10 },
-        "13": { dx: -10, dy: -10 },
-        "31": { dx: 10, dy: 10 }
+
+    const ARRIVAL_EXTENSION_KM = 3.0;
+    const DEPARTURE_EXTENSION_KM = 2.0;
+    const RUNWAY_ENTRY_KM = 0.8;
+
+    // Threshold coordinates from the OurAirports runway dataset.
+    // Each runway points from its threshold toward the reciprocal threshold.
+    const RUNWAY_GEOMETRY = {
+      LGA: {
+        "04": { threshold: [-73.88410187, 40.76919937], opposite: [-73.87069702, 40.78540039] },
+        "22": { threshold: [-73.87069702, 40.78540039], opposite: [-73.88410187, 40.76919937] },
+        "13": { threshold: [-73.87850189, 40.78229904], opposite: [-73.85710144, 40.77209854] },
+        "31": { threshold: [-73.85710144, 40.77209854], opposite: [-73.87850189, 40.78229904] }
       },
-      departure: {
-        "22": { dx: -10, dy: 10 },
-        "04": { dx: 10, dy: -10 },
-        "13": { dx: 10, dy: 10 },
-        "31": { dx: -10, dy: -10 }
+      JFK: {
+        "04L": { threshold: [-73.785599, 40.622002], opposite: [-73.764702, 40.6488] },
+        "22R": { threshold: [-73.764702, 40.6488], opposite: [-73.785599, 40.622002] },
+        "04R": { threshold: [-73.77030181884766, 40.62540054321289], opposite: [-73.75489807128906, 40.645198822021484] },
+        "22L": { threshold: [-73.75489807128906, 40.645198822021484], opposite: [-73.77030181884766, 40.62540054321289] },
+        "13L": { threshold: [-73.790199, 40.657799], opposite: [-73.7593, 40.6437] },
+        "31R": { threshold: [-73.7593, 40.6437], opposite: [-73.790199, 40.657799] },
+        "13R": { threshold: [-73.816704, 40.648399], opposite: [-73.771599, 40.627899] },
+        "31L": { threshold: [-73.771599, 40.627899], opposite: [-73.816704, 40.648399] }
+      },
+      EWR: {
+        "11": { threshold: [-74.180748, 40.702815], opposite: [-74.156502, 40.701203] },
+        "29": { threshold: [-74.156502, 40.701203], opposite: [-74.180748, 40.702815] },
+        "04L": { threshold: [-74.179456, 40.675392], opposite: [-74.16217, 40.70257] },
+        "22R": { threshold: [-74.16217, 40.70257], opposite: [-74.179456, 40.675392] },
+        "04R": { threshold: [-74.174253, 40.677588], opposite: [-74.158539, 40.702299] },
+        "22L": { threshold: [-74.158539, 40.702299], opposite: [-74.174253, 40.677588] }
       }
     };
 
-    function loadAnchors() {
+    function normalizeRunway(value) {
+      const match = String(value || '').toUpperCase().match(/\d{1,2}[LRC]?/);
+      if (!match) return null;
+      const numberMatch = match[0].match(/^\d{1,2}/);
+      const suffixMatch = match[0].match(/[LRC]$/);
+      const number = String(parseInt(numberMatch[0], 10)).padStart(2, '0');
+      return `${number}${suffixMatch ? suffixMatch[0] : ''}`;
+    }
+
+    function splitRunways(value) {
+      const matches = String(value || '').toUpperCase().match(/\d{1,2}[LRC]?/g) || [];
+      return [...new Set(matches.map(normalizeRunway).filter(Boolean))];
+    }
+
+    function bearingBetween(from, to) {
+      const lat1 = from[1] * Math.PI / 180;
+      const lat2 = to[1] * Math.PI / 180;
+      const deltaLon = (to[0] - from[0]) * Math.PI / 180;
+      const y = Math.sin(deltaLon) * Math.cos(lat2);
+      const x = Math.cos(lat1) * Math.sin(lat2) -
+        Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
+      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+
+    function destinationPoint(lat, lon, bearingDeg, distanceKm) {
+      const R = 6371.0;
+      const brng = bearingDeg * Math.PI / 180;
+      const d = distanceKm / R;
+      const lat1 = lat * Math.PI / 180;
+      const lon1 = lon * Math.PI / 180;
+
+      const lat2 = Math.asin(
+        Math.sin(lat1) * Math.cos(d) +
+        Math.cos(lat1) * Math.sin(d) * Math.cos(brng)
+      );
+      const lon2 = lon1 + Math.atan2(
+        Math.sin(brng) * Math.sin(d) * Math.cos(lat1),
+        Math.cos(d) - Math.sin(lat1) * Math.sin(lat2)
+      );
+
+      return [((lon2 * 180 / Math.PI) + 540) % 360 - 180, lat2 * 180 / Math.PI];
+    }
+
+    function runwayGeometry(airportCode, runway) {
+      return RUNWAY_GEOMETRY[airportCode]?.[normalizeRunway(runway)] || null;
+    }
+
+    function addVector(lineFeatures, headFeatures, tipFeatures, airportCode, runway, kind) {
+      const normalized = normalizeRunway(runway);
+      const geometry = runwayGeometry(airportCode, normalized);
+      if (!geometry) return;
+
+      const heading = bearingBetween(geometry.threshold, geometry.opposite);
+      let coordinates;
+      let head;
+      let tip;
+
+      if (kind === 'arrival') {
+        const source = destinationPoint(
+          geometry.threshold[1],
+          geometry.threshold[0],
+          (heading + 180) % 360,
+          ARRIVAL_EXTENSION_KM
+        );
+        const target = destinationPoint(
+          geometry.threshold[1],
+          geometry.threshold[0],
+          heading,
+          RUNWAY_ENTRY_KM
+        );
+        // Arrival vectors run from outside the airport toward the runway.
+        coordinates = [source, geometry.threshold, target];
+        head = source;
+        tip = target;
+      } else {
+        const target = destinationPoint(
+          geometry.opposite[1],
+          geometry.opposite[0],
+          heading,
+          DEPARTURE_EXTENSION_KM
+        );
+        // Departure vectors run from the runway out of the airport.
+        coordinates = [geometry.threshold, geometry.opposite, target];
+        head = target;
+        tip = target;
+      }
+
+      lineFeatures.push({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates },
+        properties: {
+          airport: airportCode,
+          runway: normalized,
+          kind,
+          bearing: heading
+        }
+      });
+
+      headFeatures.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: head },
+        properties: {
+          airport: airportCode,
+          runway: normalized,
+          kind,
+          bearing: heading
+        }
+      });
+
+      const arrowLengthKm = 0.9;
+      const arrowHalfWidthKm = 0.38;
+      const baseCenter = destinationPoint(
+        tip[1],
+        tip[0],
+        (heading + 180) % 360,
+        arrowLengthKm
+      );
+      const leftBase = destinationPoint(
+        baseCenter[1],
+        baseCenter[0],
+        (heading + 270) % 360,
+        arrowHalfWidthKm
+      );
+      const rightBase = destinationPoint(
+        baseCenter[1],
+        baseCenter[0],
+        (heading + 90) % 360,
+        arrowHalfWidthKm
+      );
+
+      tipFeatures.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[tip, leftBase, rightBase, tip]]
+        },
+        properties: {
+          airport: airportCode,
+          runway: normalized,
+          kind
+        }
+      });
+    }
+
+    function buildRunwayVectors(airports) {
+      const lineFeatures = [];
+      const headFeatures = [];
+      const tipFeatures = [];
+
+      airports.forEach((airportStatus) => {
+        splitRunways(airportStatus.landing_runway).forEach((runway) => {
+          addVector(lineFeatures, headFeatures, tipFeatures, airportStatus.code, runway, 'arrival');
+        });
+
+        splitRunways(airportStatus.departure_runway).forEach((runway) => {
+          addVector(lineFeatures, headFeatures, tipFeatures, airportStatus.code, runway, 'departure');
+        });
+      });
+
+      return {
+        lines: { type: 'FeatureCollection', features: lineFeatures },
+        heads: { type: 'FeatureCollection', features: headFeatures },
+        tips: { type: 'FeatureCollection', features: tipFeatures }
+      };
+    }
+
+    function ensureRunwayLayers(map) {
+      if (map.getSource("runway-lines")) {
+        return;
+      }
+
+      map.addSource("runway-lines", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] }
+      });
+
+      map.addSource("runway-heads", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] }
+      });
+
+      map.addSource("runway-tips", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] }
+      });
+
+      map.addLayer({
+        id: "runway-arrival-lines",
+        type: "line",
+        source: "runway-lines",
+        filter: ["==", ["get", "kind"], "arrival"],
+        paint: {
+          "line-color": "#ff4d4d",
+          "line-width": 4.0,
+          "line-opacity": 0.96
+        }
+      });
+
+      map.addLayer({
+        id: "runway-departure-lines",
+        type: "line",
+        source: "runway-lines",
+        filter: ["==", ["get", "kind"], "departure"],
+        paint: {
+          "line-color": "#2ecc71",
+          "line-width": 4.0,
+          "line-opacity": 0.96
+        }
+      });
+
+      map.addLayer({
+        id: "runway-arrival-tips",
+        type: "fill",
+        source: "runway-tips",
+        filter: ["==", ["get", "kind"], "arrival"],
+        paint: {
+          "fill-color": "#ff4d4d",
+          "fill-opacity": 1.0,
+          "fill-outline-color": "#ff7a7a"
+        }
+      });
+
+      map.addLayer({
+        id: "runway-departure-tips",
+        type: "fill",
+        source: "runway-tips",
+        filter: ["==", ["get", "kind"], "departure"],
+        paint: {
+          "fill-color": "#2ecc71",
+          "fill-opacity": 1.0,
+          "fill-outline-color": "#7be3a5"
+        }
+      });
+
+      map.addLayer({
+        id: "runway-arrival-labels",
+        type: "symbol",
+        source: "runway-heads",
+        filter: ["==", ["get", "kind"], "arrival"],
+        layout: {
+          "text-field": ["get", "runway"],
+          "text-size": 14,
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-offset": [0, -1.1],
+          "text-anchor": "bottom",
+          "text-allow-overlap": true,
+          "text-ignore-placement": true
+        },
+        paint: {
+          "text-color": "#ffffff",
+          "text-halo-color": "#9d1616",
+          "text-halo-width": 5,
+          "text-halo-blur": 0.5
+        }
+      });
+
+      map.addLayer({
+        id: "runway-departure-labels",
+        type: "symbol",
+        source: "runway-heads",
+        filter: ["==", ["get", "kind"], "departure"],
+        layout: {
+          "text-field": ["get", "runway"],
+          "text-size": 14,
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-offset": [0, 1.1],
+          "text-anchor": "top",
+          "text-allow-overlap": true,
+          "text-ignore-placement": true
+        },
+        paint: {
+          "text-color": "#ffffff",
+          "text-halo-color": "#126f3b",
+          "text-halo-width": 5,
+          "text-halo-blur": 0.5
+        }
+      });
+    }
+
+    function updateRunwayLayers(map, airports) {
+      if (
+        !map ||
+        !map.getSource("runway-lines") ||
+        !map.getSource("runway-heads") ||
+        !map.getSource("runway-tips")
+      ) {
+        return;
+      }
+
+      const vectors = buildRunwayVectors(airports);
+
+      map.getSource("runway-lines").setData(vectors.lines);
+      map.getSource("runway-heads").setData(vectors.heads);
+      map.getSource("runway-tips").setData(vectors.tips);
+    }
+
+    function parseWind(value) {
+      const match = String(value || "").toUpperCase().match(/(\d{3})\s*(\d{2,3})KT(?:\s*G(\d{2,3})KT)?/);
+      if (!match) return null;
+      return {
+        direction: parseInt(match[1], 10),
+        speed: parseInt(match[2], 10),
+        gust: match[3] ? parseInt(match[3], 10) : null
+      };
+    }
+
+    function circularMean(degrees) {
+      if (!degrees.length) return null;
+      const x = degrees.reduce((sum, d) => sum + Math.cos(d * Math.PI / 180), 0);
+      const y = degrees.reduce((sum, d) => sum + Math.sin(d * Math.PI / 180), 0);
+      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+
+    function updateMetroWeather(airports) {
+      const byCode = Object.fromEntries(airports.map(a => [a.code, a]));
+      const parsed = airports.map(a => parseWind(a.wind)).filter(Boolean);
+      const meanDirection = circularMean(parsed.map(w => w.direction));
+      const meanSpeed = parsed.length
+        ? Math.round(parsed.reduce((sum, w) => sum + w.speed, 0) / parsed.length)
+        : null;
+      const maxGust = parsed
+        .map(w => w.gust)
+        .filter(v => Number.isFinite(v))
+        .reduce((max, v) => Math.max(max, v), 0);
+
+      document.getElementById("metroLgaWind").textContent = safe(byCode.LGA?.wind);
+      document.getElementById("metroJfkWind").textContent = safe(byCode.JFK?.wind);
+      document.getElementById("metroEwrWind").textContent = safe(byCode.EWR?.wind);
+
+      if (meanDirection === null || meanSpeed === null) {
+        document.getElementById("metroWindDirection").textContent = "—";
+        document.getElementById("metroWindSpeed").textContent = "—";
+        return;
+      }
+
+      const roundedDirection = Math.round(meanDirection / 10) * 10 % 360;
+      document.getElementById("metroWindDirection").textContent =
+        `${String(roundedDirection).padStart(3, "0")}°`;
+      document.getElementById("metroWindSpeed").textContent =
+        `${String(meanSpeed).padStart(2, "0")} KT${maxGust ? ` · G${maxGust}` : ""}`;
+
+      // Aviation wind direction is where the wind comes from. The arrow points inward/downwind.
+      document.getElementById("metroWindArrow").style.transform =
+        `rotate(${roundedDirection + 180}deg)`;
+    }
+
+    function makeMarkerEl(color) {
+      const el = document.createElement('div');
+      el.className = 'airport-marker';
+      el.style.background = color;
+      return el;
+    }
+
+    async function loadData() {
+      const res = await fetch('/api/nyc', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      return await res.json();
+    }
+
+    function initMap() {
+      document.getElementById('mapboxStatus').textContent = 'loaded';
+
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return structuredClone(defaultAnchors);
-        const parsed = JSON.parse(raw);
-        const merged = structuredClone(defaultAnchors);
-        for (const key of Object.keys(merged)) {
-          if (parsed[key] && typeof parsed[key].x === "number" && typeof parsed[key].y === "number") {
-            merged[key] = { x: parsed[key].x, y: parsed[key].y };
+        const map = new mapboxgl.Map({
+          container: 'map',
+          style: 'mapbox://styles/mapbox/dark-v11',
+          center: [-73.92, 40.73],
+          zoom: 9.85,
+          pitch: 0,
+          bearing: 0,
+          attributionControl: true
+        });
+
+        map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right');
+
+        map.on('load', () => {
+          ensureRunwayLayers(map);
+          updateRunwayLayers(map, latestAirports);
+        });
+
+        return map;
+      } catch (err) {
+        console.error(err);
+        document.getElementById('status').textContent = `Map error: ${err.message}`;
+        document.getElementById('mapboxStatus').textContent = 'error';
+        return null;
+      }
+    }
+
+    let markers = [];
+    let latestAirports = [];
+
+    function clearMarkers() {
+      markers.forEach(m => m.remove());
+      markers = [];
+    }
+
+    async function refreshCardsAndMarkers(map) {
+      try {
+        const data = await loadData();
+        const airports = data.airports || [];
+        latestAirports = airports;
+
+        document.getElementById('status').textContent = safe(data.status, 'Live ATIS loaded');
+        document.getElementById('updatedAt').textContent = airports.map(a => a.updated_at).find(Boolean) || '—';
+
+        updateMetroWeather(airports);
+
+        clearMarkers();
+        airports.forEach(a => {
+          setCard(a.code, a);
+          if (map) {
+            const marker = new mapboxgl.Marker({ element: makeMarkerEl(AIRPORTS[a.code]?.color || '#66a3ff') })
+              .setLngLat([a.lon, a.lat])
+              .setPopup(new mapboxgl.Popup({ offset: 16, closeButton: false }).setHTML(airportPopupHTML(AIRPORTS[a.code], a)))
+              .addTo(map);
+            marker.getElement().title = `${a.code} · ${a.name}`;
+            markers.push(marker);
           }
+        });
+
+        if (map) {
+          ensureRunwayLayers(map);
+          updateRunwayLayers(map, airports);
         }
-        return merged;
-      } catch {
-        return structuredClone(defaultAnchors);
+      } catch (err) {
+        document.getElementById('status').textContent = `Error: ${err.message}`;
+        console.error(err);
       }
     }
 
-    function saveAnchors() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(anchors, null, 2));
-    }
-
-    function setSelectedRunway(runway) {
-      selectedRunway = runway;
-      document.querySelectorAll("[data-runway]").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.runway === runway);
-      });
-      document.getElementById("readout").textContent = `Selected runway: ${runway} — click map to place anchor`;
-      document.getElementById("hint").textContent =
-        `Selected runway ${runway}. Click the map to place its anchor point. The same anchor will be used for arrival and departure arrows.`;
-    }
-
-    function clamp(v) {
-      return Math.max(0.5, Math.min(99.5, v));
-    }
-
-    function renderOverlay(data) {
-      const overlay = document.getElementById("overlaySvg");
-      const landing = data?.landing_runway ? String(data.landing_runway).padStart(2, "0") : null;
-      const departure = data?.departure_runway ? String(data.departure_runway).padStart(2, "0") : null;
-
-      const parts = [];
-
-      // Defs
-      parts.push(`
-        <defs>
-          <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill="#ff4d4d"></path>
-          </marker>
-          <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill="#2ecc71"></path>
-          </marker>
-        </defs>
-      `);
-
-      // Draw runway anchors
-      for (const runway of ["04", "22", "13", "31"]) {
-        const a = anchors[runway];
-        const isSelected = runway === selectedRunway;
-        const isLanding = runway === landing;
-        const isDeparture = runway === departure;
-
-        const r = isSelected ? 1.4 : 0.9;
-        const fill = isLanding ? "#ff4d4d" : isDeparture ? "#2ecc71" : "#66a3ff";
-        const stroke = isSelected ? "#ffffff" : "rgba(255,255,255,.9)";
-        const labelY = clamp(a.y - 1.8);
-
-        parts.push(`
-          <circle cx="${a.x}" cy="${a.y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${isSelected ? 0.35 : 0.22}" opacity="0.95"></circle>
-          <text x="${a.x + 1.3}" y="${labelY}" fill="#ffffff" font-size="1.9" font-weight="900" stroke="rgba(0,0,0,.55)" stroke-width="0.15" paint-order="stroke">
-            ${runway}
-          </text>
-        `);
-      }
-
-      function drawArrow(runway, mode) {
-        const a = anchors[runway];
-        const v = activeLayout[mode][runway];
-        if (!a || !v) return "";
-
-        const x1 = mode === "arrival" ? clamp(a.x + v.dx) : a.x;
-        const y1 = mode === "arrival" ? clamp(a.y + v.dy) : a.y;
-        const x2 = mode === "departure" ? clamp(a.x + v.dx) : a.x;
-        const y2 = mode === "departure" ? clamp(a.y + v.dy) : a.y;
-
-        const stroke = mode === "arrival" ? "#ff4d4d" : "#2ecc71";
-        const marker = mode === "arrival" ? "url(#arrow-red)" : "url(#arrow-green)";
-        const width = mode === "arrival" ? 1.0 : 0.95;
-
-        return `
-          <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${width}" marker-end="${marker}" opacity="0.95"></line>
-        `;
-      }
-
-      if (landing) parts.push(drawArrow(landing, "arrival"));
-      if (departure) parts.push(drawArrow(departure, "departure"));
-
-      overlay.innerHTML = parts.join("");
-    }
-
-    function exportJson() {
-      return JSON.stringify(anchors, null, 2);
-    }
-
-    function download(filename, text) {
-      const blob = new Blob([text], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-
-    async function copyToClipboard(text) {
-      await navigator.clipboard.writeText(text);
-    }
-
-    function handleMapClick(event) {
-      const stage = document.getElementById("mapStage");
-      const rect = stage.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * 100;
-      const y = ((event.clientY - rect.top) / rect.height) * 100;
-
-      const xx = clamp(x);
-      const yy = clamp(y);
-
-      anchors[selectedRunway] = { x: Number(xx.toFixed(1)), y: Number(yy.toFixed(1)) };
-      saveAnchors();
-
-      document.getElementById("coordReadout").textContent = `${xx.toFixed(1)}%, ${yy.toFixed(1)}%`;
-      document.getElementById("readout").textContent = `Placed runway ${selectedRunway} at x=${xx.toFixed(1)}%, y=${yy.toFixed(1)}%`;
-      document.getElementById("hint").textContent =
-        `Runway ${selectedRunway} updated. The editor saved the new anchor locally.`;
-
-      renderOverlay(lastData);
-    }
-
-    let lastData = null;
-
-    async function refresh() {
-      try {
-        const response = await fetch("/api/lga", { cache: "no-store" });
-        const data = await response.json();
-        lastData = data;
-
-        const approach = safe(data.approach_label || data.approach_type);
-        const landing = safe(data.landing_runway);
-        const departure = safe(data.departure_runway);
-        const wind = safe(data.wind);
-        const atisTime = safe(data.atis_time);
-        const updated = safe(data.updated_at);
-        const status = safe(data.status, "Live ATIS loaded");
-
-        document.getElementById("updatedAt").textContent = updated;
-        document.getElementById("approach").textContent = approach;
-        document.getElementById("landingRunway").textContent = landing;
-        document.getElementById("departureRunway").textContent = departure;
-        document.getElementById("wind").textContent = wind;
-        document.getElementById("atisTime").textContent = atisTime;
-        document.getElementById("rawAtis").textContent = safe(data.raw_atis);
-        document.getElementById("statusSide").textContent = status;
-        document.getElementById("status").textContent = status;
-        document.getElementById("panelSub").textContent = `${approach} / land ${landing} / depart ${departure}`;
-
-        renderOverlay(data);
-      } catch (error) {
-        document.getElementById("status").textContent = `Error: ${error.message}`;
-        document.getElementById("statusSide").textContent = "Error";
-        console.error(error);
-      }
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      document.querySelectorAll("[data-runway]").forEach(btn => {
-        btn.addEventListener("click", () => setSelectedRunway(btn.dataset.runway));
-      });
-
-      document.getElementById("mapStage").addEventListener("click", handleMapClick);
-
-      document.getElementById("resetBtn").addEventListener("click", () => {
-        anchors = structuredClone(defaultAnchors);
-        saveAnchors();
-        document.getElementById("coordReadout").textContent = "reset to defaults";
-        document.getElementById("readout").textContent = `Selected runway: ${selectedRunway} — defaults restored`;
-        renderOverlay(lastData);
-      });
-
-      document.getElementById("copyBtn").addEventListener("click", async () => {
-        try {
-          await copyToClipboard(exportJson());
-          document.getElementById("readout").textContent = "Anchor JSON copied to clipboard";
-        } catch (err) {
-          document.getElementById("readout").textContent = "Clipboard copy failed";
-          console.error(err);
-        }
-      });
-
-      document.getElementById("downloadBtn").addEventListener("click", () => {
-        download("lga_runway_anchors.json", exportJson());
-      });
-
-      setSelectedRunway(selectedRunway);
-      refresh();
+    window.addEventListener('DOMContentLoaded', async () => {
+      const map = initMap();
+      await refreshCardsAndMarkers(map);
+      setInterval(() => refreshCardsAndMarkers(map), 60000);
     });
-
-    setInterval(refresh, 60000);
   </script>
 </body>
 </html>
 """
+
+
+def render_index(mapbox_token: str = '') -> str:
+    return INDEX_TEMPLATE.replace('__MAPBOX_TOKEN__', mapbox_token)
