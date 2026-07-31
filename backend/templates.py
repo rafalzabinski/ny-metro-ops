@@ -6,27 +6,82 @@ INDEX_TEMPLATE = """<!doctype html>
   <title>NY Metro Ops</title>
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.5.2/mapbox-gl.css" rel="stylesheet" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.2/mapbox-gl.js"></script>
+  <script>
+    (function () {
+      var theme = 'dark';
+      try {
+        var stored = localStorage.getItem('nyMetroOpsTheme');
+        if (stored === 'light' || stored === 'dark') {
+          theme = stored;
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          theme = 'light';
+        }
+      } catch (err) {
+        // localStorage/matchMedia unavailable (e.g. private browsing) - fall back to dark.
+      }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
   <style>
     :root {
       --bg: #07090c;
+      --bg-grad-1: #0a0d12;
+      --bg-grad-2: #07090c;
+      --bg-glow: rgba(102,163,255,.12);
+      --panel-grad-1: #12161d;
+      --panel-grad-2: #0d1015;
+      --updated-grad-1: #141923;
+      --updated-grad-2: #0d1117;
       --panel: #11141a;
       --border: #2b3038;
       --text: #e9edf4;
+      --text-strong: #ffffff;
+      --text-strong-soft: #f2f6ff;
+      --text-secondary: #d9deea;
       --muted: #8c96a8;
       --arrival: #ff4d4d;
       --departure: #2ecc71;
       --accent: #66a3ff;
       --soft: rgba(255,255,255,.06);
+      --hairline: rgba(255,255,255,.08);
+      --hairline-soft: rgba(255,255,255,.06);
       --shadow: 0 18px 45px rgba(0,0,0,.45);
+      --live-text: #b8ffd0;
+    }
+    :root[data-theme="light"] {
+      --bg: #eef1f6;
+      --bg-grad-1: #f5f7fb;
+      --bg-grad-2: #e7ebf2;
+      --bg-glow: rgba(102,163,255,.10);
+      --panel-grad-1: #ffffff;
+      --panel-grad-2: #f3f5f9;
+      --updated-grad-1: #ffffff;
+      --updated-grad-2: #eef1f6;
+      --panel: #ffffff;
+      --border: #d7dce4;
+      --text: #1b2330;
+      --text-strong: #0b0f16;
+      --text-strong-soft: #10161f;
+      --text-secondary: #333d4d;
+      --muted: #5c6576;
+      --arrival: #d92c2c;
+      --departure: #1f9e56;
+      --accent: #2f6fe0;
+      --soft: rgba(10,15,30,.045);
+      --hairline: rgba(10,15,30,.10);
+      --hairline-soft: rgba(10,15,30,.07);
+      --shadow: 0 12px 30px rgba(20,30,50,.12);
+      --live-text: #0e7a3e;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       background:
-        radial-gradient(circle at top, rgba(102,163,255,.12), transparent 38%),
-        linear-gradient(180deg, #0a0d12, #07090c);
+        radial-gradient(circle at top, var(--bg-glow), transparent 38%),
+        linear-gradient(180deg, var(--bg-grad-1), var(--bg-grad-2));
       color: var(--text);
       font-family: Inter, Arial, Helvetica, sans-serif;
+      transition: background .2s ease, color .2s ease;
     }
     .page {
       max-width: 1600px;
@@ -52,7 +107,7 @@ INDEX_TEMPLATE = """<!doctype html>
       line-height: 1;
       letter-spacing: .04em;
       font-weight: 900;
-      color: #f7f9fb;
+      color: var(--text-strong);
     }
     .tagline {
       color: var(--muted);
@@ -61,21 +116,44 @@ INDEX_TEMPLATE = """<!doctype html>
       font-weight: 800;
       letter-spacing: .22em;
     }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .theme-toggle {
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--updated-grad-1), var(--updated-grad-2));
+      color: var(--text-secondary);
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      box-shadow: var(--shadow);
+      transition: background .2s ease, color .2s ease, border-color .2s ease;
+    }
+    .theme-toggle:hover {
+      color: var(--text-strong);
+      border-color: var(--accent);
+    }
     .updated-box {
       border: 1px solid var(--border);
-      background: linear-gradient(180deg, #141923, #0d1117);
+      background: linear-gradient(180deg, var(--updated-grad-1), var(--updated-grad-2));
       box-shadow: var(--shadow);
       padding: 10px 14px;
       font-size: 12px;
       text-align: right;
       min-width: 250px;
-      color: #d9deea;
+      color: var(--text-secondary);
     }
     .updated-box strong {
       display: block;
       font-size: 15px;
       margin-top: 3px;
-      color: #fff;
+      color: var(--text-strong);
     }
     .layout {
       display: grid;
@@ -91,11 +169,12 @@ INDEX_TEMPLATE = """<!doctype html>
     }
     .card,
     .map-panel {
-      background: linear-gradient(180deg, #12161d, #0d1015);
+      background: linear-gradient(180deg, var(--panel-grad-1), var(--panel-grad-2));
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
       border-radius: 18px;
       overflow: hidden;
+      transition: background .2s ease, border-color .2s ease;
     }
     .card {
       padding: 13px 14px;
@@ -110,7 +189,7 @@ INDEX_TEMPLATE = """<!doctype html>
       justify-content: space-between;
       align-items: flex-start;
       gap: 12px;
-      border-bottom: 1px solid rgba(255,255,255,.09);
+      border-bottom: 1px solid var(--hairline);
       padding-bottom: 8px;
       margin-bottom: 4px;
     }
@@ -118,7 +197,7 @@ INDEX_TEMPLATE = """<!doctype html>
       font-size: 32px;
       font-weight: 900;
       line-height: 1;
-      color: #fff;
+      color: var(--text-strong);
     }
     .airport-name {
       margin-top: 4px;
@@ -131,7 +210,7 @@ INDEX_TEMPLATE = """<!doctype html>
     .live-badge {
       border: 1px solid rgba(46,204,113,.55);
       background: rgba(46,204,113,.15);
-      color: #b8ffd0;
+      color: var(--live-text);
       padding: 6px 9px;
       font-size: 12px;
       font-weight: 900;
@@ -143,7 +222,7 @@ INDEX_TEMPLATE = """<!doctype html>
       display: grid;
       grid-template-columns: 120px 1fr;
       gap: 8px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
+      border-bottom: 1px solid var(--hairline);
       padding: 8px 0;
       font-size: 14px;
     }
@@ -156,7 +235,7 @@ INDEX_TEMPLATE = """<!doctype html>
     }
     .value {
       font-weight: 800;
-      color: #f2f6ff;
+      color: var(--text-strong-soft);
       word-break: break-word;
     }
 
@@ -173,7 +252,7 @@ INDEX_TEMPLATE = """<!doctype html>
 
     .compact-metric {
       min-width: 0;
-      border-bottom: 1px solid rgba(255,255,255,.07);
+      border-bottom: 1px solid var(--hairline-soft);
       padding: 6px 0 7px;
     }
 
@@ -192,7 +271,7 @@ INDEX_TEMPLATE = """<!doctype html>
 
     .strip-value {
       font-weight: 800;
-      color: #f4f7ff;
+      color: var(--text-strong-soft);
       font-size: 14px;
       line-height: 1.2;
       overflow-wrap: anywhere;
@@ -219,9 +298,9 @@ INDEX_TEMPLATE = """<!doctype html>
       font-size: 10px;
       font-weight: 900;
       letter-spacing: .08em;
-      color: #d9deea;
-      border: 1px solid rgba(255,255,255,.09);
-      background: rgba(255,255,255,.04);
+      color: var(--text-secondary);
+      border: 1px solid var(--hairline);
+      background: var(--soft);
     }
 
     .weather-card {
@@ -242,10 +321,10 @@ INDEX_TEMPLATE = """<!doctype html>
       width: 84px;
       height: 84px;
       border-radius: 50%;
-      border: 1px solid rgba(255,255,255,.12);
+      border: 1px solid var(--hairline);
       background:
-        radial-gradient(circle, rgba(102,163,255,.12), transparent 56%),
-        rgba(255,255,255,.025);
+        radial-gradient(circle, var(--bg-glow), transparent 56%),
+        var(--soft);
       display: grid;
       place-items: center;
     }
@@ -254,7 +333,7 @@ INDEX_TEMPLATE = """<!doctype html>
     .wind-compass::after {
       content: "";
       position: absolute;
-      background: rgba(255,255,255,.08);
+      background: var(--hairline);
     }
 
     .wind-compass::before {
@@ -284,7 +363,7 @@ INDEX_TEMPLATE = """<!doctype html>
       width: 4px;
       height: 36px;
       border-radius: 999px;
-      background: #66a3ff;
+      background: var(--accent);
       box-shadow: 0 0 12px rgba(102,163,255,.35);
     }
 
@@ -295,8 +374,42 @@ INDEX_TEMPLATE = """<!doctype html>
       top: 5px;
       width: 16px;
       height: 16px;
-      border-left: 4px solid #66a3ff;
-      border-top: 4px solid #66a3ff;
+      border-left: 4px solid var(--accent);
+      border-top: 4px solid var(--accent);
+      transform: rotate(45deg);
+    }
+
+    .mini-wind-arrow {
+      position: relative;
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      margin-right: 6px;
+      vertical-align: -3px;
+      visibility: hidden;
+      transition: transform .4s ease;
+    }
+
+    .mini-wind-arrow::before {
+      content: "";
+      position: absolute;
+      left: 7px;
+      top: 1px;
+      width: 2px;
+      height: 12px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .mini-wind-arrow::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 0;
+      width: 6px;
+      height: 6px;
+      border-left: 2px solid var(--accent);
+      border-top: 2px solid var(--accent);
       transform: rotate(45deg);
     }
 
@@ -311,13 +424,13 @@ INDEX_TEMPLATE = """<!doctype html>
       font-size: 34px;
       line-height: 1;
       font-weight: 900;
-      color: #fff;
+      color: var(--text-strong);
     }
 
     .weather-speed {
       font-size: 15px;
       font-weight: 900;
-      color: #dce5f6;
+      color: var(--text-secondary);
     }
 
     .weather-sub {
@@ -334,7 +447,7 @@ INDEX_TEMPLATE = """<!doctype html>
     }
 
     .airport-wind {
-      border-top: 1px solid rgba(255,255,255,.07);
+      border-top: 1px solid var(--hairline-soft);
       padding-top: 7px;
       font-size: 11px;
       color: var(--muted);
@@ -343,7 +456,7 @@ INDEX_TEMPLATE = """<!doctype html>
     .airport-wind strong {
       display: block;
       margin-top: 2px;
-      color: #fff;
+      color: var(--text-strong);
       font-size: 12px;
     }
 
@@ -359,13 +472,13 @@ INDEX_TEMPLATE = """<!doctype html>
       align-items: flex-start;
       gap: 14px;
       padding: 14px 16px 12px;
-      border-bottom: 1px solid rgba(255,255,255,.09);
+      border-bottom: 1px solid var(--hairline);
     }
     .map-title {
       font-size: 22px;
       font-weight: 900;
       letter-spacing: .02em;
-      color: #fff;
+      color: var(--text-strong);
     }
     .map-sub {
       margin-top: 4px;
@@ -388,13 +501,13 @@ INDEX_TEMPLATE = """<!doctype html>
       display: flex;
       gap: 18px;
       align-items: center;
-      border-top: 1px solid rgba(255,255,255,.08);
+      border-top: 1px solid var(--hairline);
       padding: 10px 14px;
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: .08em;
       font-weight: 900;
-      color: #d6dcea;
+      color: var(--text-secondary);
       flex-wrap: wrap;
     }
     .legend-dot {
@@ -404,13 +517,13 @@ INDEX_TEMPLATE = """<!doctype html>
       border-radius: 999px;
       margin-right: 6px;
       vertical-align: -1px;
-      box-shadow: 0 0 0 2px rgba(255,255,255,.08);
+      box-shadow: 0 0 0 2px var(--hairline);
     }
     .legend-dot.arrival { background: var(--arrival); }
     .legend-dot.departure { background: var(--departure); }
     .legend-dot.airport { background: var(--accent); }
     .statusbar {
-      border-top: 1px solid rgba(255,255,255,.08);
+      border-top: 1px solid var(--hairline);
       padding: 10px 14px;
       color: var(--muted);
       text-transform: uppercase;
@@ -422,7 +535,7 @@ INDEX_TEMPLATE = """<!doctype html>
       gap: 12px;
       flex-wrap: wrap;
     }
-    .dim { color: #c2cbdb; font-weight: 800; }
+    .dim { color: var(--text-secondary); font-weight: 800; }
     .airport-marker {
       width: 18px;
       height: 18px;
@@ -467,9 +580,14 @@ INDEX_TEMPLATE = """<!doctype html>
         <h1>NY METRO OPS</h1>
         <div class="tagline">NYC airports live runways</div>
       </div>
-      <div class="updated-box">
-        UPDATED
-        <strong id="updatedAt">—</strong>
+      <div class="topbar-right">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme">
+          <span id="themeToggleLabel">DARK</span>
+        </button>
+        <div class="updated-box">
+          UPDATED
+          <strong id="updatedAt">—</strong>
+        </div>
       </div>
     </header>
 
@@ -494,7 +612,7 @@ INDEX_TEMPLATE = """<!doctype html>
             </div>
             <div class="compact-metric wide">
               <div class="strip-label">Wind</div>
-              <div class="strip-value" id="lgaWind">—</div>
+              <div class="strip-value"><span class="mini-wind-arrow" id="lgaWindArrow"></span><span id="lgaWind">—</span></div>
             </div>
             <div class="compact-metric wide">
               <div class="strip-label">Approach</div>
@@ -523,7 +641,7 @@ INDEX_TEMPLATE = """<!doctype html>
             </div>
             <div class="compact-metric wide">
               <div class="strip-label">Wind</div>
-              <div class="strip-value" id="jfkWind">—</div>
+              <div class="strip-value"><span class="mini-wind-arrow" id="jfkWindArrow"></span><span id="jfkWind">—</span></div>
             </div>
             <div class="compact-metric wide">
               <div class="strip-label">Approach</div>
@@ -552,7 +670,7 @@ INDEX_TEMPLATE = """<!doctype html>
             </div>
             <div class="compact-metric wide">
               <div class="strip-label">Wind</div>
-              <div class="strip-value" id="ewrWind">—</div>
+              <div class="strip-value"><span class="mini-wind-arrow" id="ewrWindArrow"></span><span id="ewrWind">—</span></div>
             </div>
             <div class="compact-metric wide">
               <div class="strip-label">Approach</div>
@@ -598,7 +716,7 @@ INDEX_TEMPLATE = """<!doctype html>
             <div class="map-title">NYC AIRPORT VIEW</div>
             <div class="map-sub">Current open runways for LGA, JFK, and EWR</div>
           </div>
-          <div class="map-sub">Dark style · Mapbox</div>
+          <div class="map-sub" id="mapStyleLabel">Dark style · Mapbox</div>
         </div>
 
         <div class="map-area">
@@ -632,12 +750,25 @@ INDEX_TEMPLATE = """<!doctype html>
       return value === undefined || value === null || value === "" ? fallback : value;
     }
 
+    function formatUpdatedAt(value) {
+      if (!value) return "—";
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return value;
+      const datePart = `${String(parsed.getMonth() + 1).padStart(2, "0")}/${String(parsed.getDate()).padStart(2, "0")}/${parsed.getFullYear()}`;
+      let hours = parsed.getHours();
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12 || 12;
+      const minutes = String(parsed.getMinutes()).padStart(2, "0");
+      return `${datePart} ${hours}:${minutes}${ampm}`;
+    }
+
     function airportCardIds(code) {
       return {
         approach: `${code.toLowerCase()}Approach`,
         landing: `${code.toLowerCase()}Landing`,
         departure: `${code.toLowerCase()}Departure`,
         wind: `${code.toLowerCase()}Wind`,
+        windArrow: `${code.toLowerCase()}WindArrow`,
         atis: `${code.toLowerCase()}Atis`
       };
     }
@@ -661,6 +792,18 @@ INDEX_TEMPLATE = """<!doctype html>
       document.getElementById(ids.departure).textContent = safe(status.departure_runway);
       document.getElementById(ids.wind).textContent = safe(status.wind);
       document.getElementById(ids.atis).textContent = `ATIS ${safe(status.atis_time)}`;
+
+      const arrowEl = document.getElementById(ids.windArrow);
+      if (arrowEl) {
+        const wind = parseWind(status.wind);
+        if (wind) {
+          arrowEl.style.visibility = 'visible';
+          // Aviation wind direction is where the wind comes from; the arrow points downwind.
+          arrowEl.style.transform = `rotate(${(wind.direction + 180) % 360}deg)`;
+        } else {
+          arrowEl.style.visibility = 'hidden';
+        }
+      }
     }
 
 
@@ -1056,13 +1199,22 @@ INDEX_TEMPLATE = """<!doctype html>
       return await res.json();
     }
 
+    const MAP_STYLES = {
+      dark: 'mapbox://styles/mapbox/dark-v11',
+      light: 'mapbox://styles/mapbox/light-v11',
+    };
+
+    function currentTheme() {
+      return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    }
+
     function initMap() {
       document.getElementById('mapboxStatus').textContent = 'loaded';
 
       try {
         const map = new mapboxgl.Map({
           container: 'map',
-          style: 'mapbox://styles/mapbox/dark-v11',
+          style: MAP_STYLES[currentTheme()],
           center: [-73.92, 40.73],
           zoom: 9.85,
           pitch: 0,
@@ -1101,7 +1253,7 @@ INDEX_TEMPLATE = """<!doctype html>
         latestAirports = airports;
 
         document.getElementById('status').textContent = safe(data.status, 'Live ATIS loaded');
-        document.getElementById('updatedAt').textContent = airports.map(a => a.updated_at).find(Boolean) || '—';
+        document.getElementById('updatedAt').textContent = formatUpdatedAt(airports.map(a => a.updated_at).find(Boolean));
 
         updateMetroWeather(airports);
 
@@ -1128,8 +1280,44 @@ INDEX_TEMPLATE = """<!doctype html>
       }
     }
 
+    function syncThemeUI(theme) {
+      const label = document.getElementById('themeToggleLabel');
+      if (label) label.textContent = theme === 'light' ? 'LIGHT' : 'DARK';
+      const mapStyleLabel = document.getElementById('mapStyleLabel');
+      if (mapStyleLabel) mapStyleLabel.textContent = theme === 'light' ? 'Light style · Mapbox' : 'Dark style · Mapbox';
+    }
+
+    function applyTheme(theme, map) {
+      document.documentElement.setAttribute('data-theme', theme);
+      try {
+        localStorage.setItem('nyMetroOpsTheme', theme);
+      } catch (err) {
+        // ignore (e.g. private browsing storage restrictions)
+      }
+      syncThemeUI(theme);
+
+      if (map) {
+        // Switching styles wipes any custom sources/layers, so the runway
+        // vectors have to be re-added once the new style finishes loading.
+        map.once('style.load', () => {
+          ensureRunwayLayers(map);
+          updateRunwayLayers(map, latestAirports);
+        });
+        map.setStyle(MAP_STYLES[theme]);
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', async () => {
       const map = initMap();
+      syncThemeUI(currentTheme());
+
+      const toggleButton = document.getElementById('themeToggle');
+      if (toggleButton) {
+        toggleButton.addEventListener('click', () => {
+          applyTheme(currentTheme() === 'light' ? 'dark' : 'light', map);
+        });
+      }
+
       await refreshCardsAndMarkers(map);
       setInterval(() => refreshCardsAndMarkers(map), 60000);
     });
